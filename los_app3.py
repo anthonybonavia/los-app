@@ -38,45 +38,41 @@ def load_data():
 # ── 2) Load pre-trained models & reports from Dropbox ───────────────────────
 @st.cache_resource
 def load_models():
+    # these all must be the /s/XXXXXXXX/ URLs, with www→dl.dropboxusercontent and dl=1
     urls = {
-        "model_nonsepsis": (
-            "https://www.dropbox.com/scl/fi/emced9gefcewqb333104i/"
-            "model_nonsepsis_calibrated.pkl?rlkey=0d8lv3xr4dzvs0p831ka8456j&dl=1"
-        ),
-        "report_nonsepsis": (
-            "https://www.dropbox.com/scl/fi/bmavnuly2ec9vj6cgf1ht/"
-            "model_nonsepsis_report.pkl?rlkey=2pcotjymy9ktr41gcewb6ic7s&dl=1"
-        ),
-        "model_sepsis": (
-            "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/"
-            "model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
-        ),
-        "report_sepsis": (
-            "https://www.dropbox.com/scl/fi/kirx37p85nbbuwa3oliob/"
-            "model_sepsis_report.pkl?rlkey=q1wfbh75aqsvnsf9sxchaee7m&dl=1"
-        ),
+        "model_nonsepsis":    "https://dl.dropboxusercontent.com/s/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1",
+        "report_nonsepsis":   "https://dl.dropboxusercontent.com/s/bmavnuly2ec9vj6cgf1ht/model_nonsepsis_report.pkl?rlkey=2pcotjymy9ktr41gcewb6ic7s&dl=1",
+        "model_sepsis":       "https://dl.dropboxusercontent.com/s/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1",
+        "report_sepsis":      "https://dl.dropboxusercontent.com/s/kirx37p85nbbuwa3oliob/model_sepsis_report.pkl?rlkey=q1wfbh75aqsvnsf9sxchaee7m&dl=1",
     }
-    local_files = {}
+
+    local = {}
     for key, url in urls.items():
-        # derive a safe filename
-        fname = url.split('/')[-1].split('?')[0]
-        if not os.path.exists(fname):
+        fname = url.split("/")[-1].split("?")[0]
+        if not Path(fname).exists() or os.path.getsize(fname) < 100:
             r = requests.get(url, stream=True)
             r.raise_for_status()
-            with open(fname, 'wb') as f:
+            with open(fname, "wb") as f:
                 for chunk in r.iter_content(8192):
                     f.write(chunk)
-        local_files[key] = fname
+            # sanity check: ensure it’s not an HTML error page
+            hdr = open(fname, "rb").read(10)
+            if hdr.startswith(b"<"):
+                raise RuntimeError(
+                    f"{fname} looks like HTML (got {hdr!r}). "
+                    "Make sure you’re using a dl.dropboxusercontent.com URL with dl=1!"
+                )
+        st.write(f"🔄 Cached `{fname}` ({os.path.getsize(fname)/1e6:.1f} MB)")
+        local[key] = fname
 
-    # memory-map the models
-    non_model = joblib.load(local_files['model_nonsepsis'], mmap_mode='r')
-    sepsis_model = joblib.load(local_files['model_sepsis'], mmap_mode='r')
-    non_report = joblib.load(local_files['report_nonsepsis'])
-    sepsis_report = joblib.load(local_files['report_sepsis'])
+    non_model   = joblib.load(local["model_nonsepsis"], mmap_mode="r")
+    sepsis_model= joblib.load(local["model_sepsis"],    mmap_mode="r")
+    non_report  = joblib.load(local["report_nonsepsis"])
+    sepsis_report = joblib.load(local["report_sepsis"])
 
-    # return in order: sepsis_report, sepsis_model, nonsepsis_report, nonsepsis_model
+    # return in the same order your UI expects:
+    #   sepsis_report, sepsis_model, nonsepsis_report, nonsepsis_model
     return sepsis_report, sepsis_model, non_report, non_model
-
 # ── 3) App UI ───────────────────────────────────────────────────────────────
 st.title("Multiclass LOS Classifier (Early Death, Short, Long)")
 
