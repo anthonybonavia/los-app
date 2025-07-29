@@ -1,0 +1,4 @@
+# ignore data and models
+my_table.csv
+model_sepsis_calibrated.pkl
+model_nonsepsis_calibrated.pkl
