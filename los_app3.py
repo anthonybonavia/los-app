@@ -125,22 +125,32 @@ with st.form('patient_form'):
     seps = st.selectbox('Meets Sepsis-3 criteria?', ['Yes','No'])
     submitted = st.form_submit_button('Compute')
 
+# … earlier code …
+
 if submitted:
+    # build patient row
     pat = {}
     for feat, val in inputs.items():
         if feat in NUMERIC:
             pat[feat] = val
         elif feat in BINARY:
-            pat[feat] = 1 if val == 'Yes' else 0 if val == 'No' else np.nan
+            pat[feat] = 1 if val=='Yes' else 0 if val=='No' else np.nan
         else:
-            pat[feat] = val if val != 'Unknown' else np.nan
+            pat[feat] = val if val!='Unknown' else np.nan
 
     pat_df = pd.DataFrame([pat])
-    model = sepsis_model if seps == 'Yes' else nonsepsis_model
-    pred = model.predict(pat_df)[0]
+
+    # **FILL MISSING BEFORE PREDICTING**
+    pat_df[NUMERIC] = pat_df[NUMERIC].fillna(0)
+    pat_df[BINARY]  = pat_df[BINARY].fillna(0)
+    pat_df['ventilation'] = pat_df['ventilation'].fillna('Unknown')
+
+    # pick model & predict
+    model = sepsis_model if seps=='Yes' else nonsepsis_model
+    pred  = model.predict(pat_df)[0]
     probs = model.predict_proba(pat_df)[0]
 
     st.write(f"**Predicted class:** {pred}")
-    st.write('**Class probabilities:**')
+    st.write("**Class probabilities:**")
     proba_df = pd.DataFrame([probs], columns=model.classes_)
-    st.table(proba_df.style.format('{:.2%}'))
+    st.table(proba_df.style.format("{:.2%}"))
