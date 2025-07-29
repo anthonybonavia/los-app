@@ -140,13 +140,15 @@ if submitted:
 
     pat_df = pd.DataFrame([pat])
 
-    # **FILL MISSING BEFORE PREDICTING**
+    # --- Fill missing values for inference ---
     pat_df[NUMERIC] = pat_df[NUMERIC].fillna(0)
     pat_df[BINARY]  = pat_df[BINARY].fillna(0)
     pat_df['ventilation'] = pat_df['ventilation'].fillna('Unknown')
 
-    # pick model & predict
-    model = sepsis_model if seps=='Yes' else nonsepsis_model
+    # pick the right model
+    model = sepsis_model if seps == 'Yes' else nonsepsis_model
+
+    # now safe to predict
     pred  = model.predict(pat_df)[0]
     probs = model.predict_proba(pat_df)[0]
 
