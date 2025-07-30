@@ -1,4 +1,27 @@
-# ignore data and models
-my_table.csv
-model_sepsis_calibrated.pkl
-model_nonsepsis_calibrated.pkl
+# Byte‐compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+env/
+.env.*
+
+# macOS
+.DS_Store
+
+# Editor folders
+.vscode/
+.idea/
+
+# Streamlit cache / temp
+.streamlit/
+
+# Data & model files
+*.csv
+*.pkl
+
+# Logs
+*.log
