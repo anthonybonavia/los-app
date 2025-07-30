@@ -4,6 +4,10 @@ import numpy as np
 import joblib
 import requests
 from io import BytesIO
+import sys, os
+
+st.write(">>> Running on Python:", sys.version.replace('\n',' '))
+st.write(">>> Repo root contains:", os.listdir('.'))
 
 # ── 1) Load patient reference data for form dropdowns ─────────────────────────
 @st.cache_data
