@@ -1,7 +1,5 @@
 __pycache__/
 *.pyc
-*.pkl
-.env
 .venv/
-*.log
+losenv/
 .DS_Store
