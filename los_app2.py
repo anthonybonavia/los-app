@@ -6,8 +6,14 @@ import requests
 from io import BytesIO
 import sys, os
 
-st.write(">>> Running on Python:", sys.version.replace('\n',' '))
-st.write(">>> Repo root contains:", os.listdir('.'))
+import subprocess, pkgutil
+st.write("Python:", sys.version.replace("\n"," "))
+st.write("Installed numpy:", __import__("numpy").__version__)
+st.write("Installed scikit-learn:", __import__("sklearn").__version__)
+st.write("Installed joblib:", __import__("joblib").__version__)
+
+subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=False)
+
 
 # ── 1) Load patient reference data for form dropdowns ─────────────────────────
 @st.cache_data
