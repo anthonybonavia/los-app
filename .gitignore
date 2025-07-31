@@ -1,27 +1,7 @@
-# Byte‐compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-venv/
-.env/
-env/
-.env.*
-
-# macOS
-.DS_Store
-
-# Editor folders
-.vscode/
-.idea/
-
-# Streamlit cache / temp
-.streamlit/
-
-# Data & model files
-*.csv
+*.pyc
 *.pkl
-
-# Logs
+.env
+.venv/
 *.log
+.DS_Store
