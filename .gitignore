@@ -1,5 +1,44 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-.venv/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
 losenv/
+*.egg-info/
+.eggs/
+
+# Pip cache
+pip-wheel-metadata/
+*.whl
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Streamlit caches / logs
+.streamlit/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sensitive or large external artifacts (don't commit model binaries here)
+*.pkl
+*.joblib
+*.csv
+# If you store trained models on Dropbox, keep placeholders or downloader scripts only.
+
+# Coverage / test artifacts
+htmlcov/
+.coverage
+
+# Python environment exports
