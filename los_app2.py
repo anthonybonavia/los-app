@@ -37,21 +37,36 @@ def load_data():
     return df
 
 # ── 2) Load pre‐built, calibrated models from Dropbox ─────────────────────────
+# Cache the loaded models so network fetch happens once per session
 @st.cache_resource
 def load_models():
+    # Replace these placeholders with your actual Dropbox "dl=1" links
     sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
     non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
 
-    # fetch bytes and load pickles
-    r1 = requests.get(sep_url)
-    r1.raise_for_status()
-    model_sep = joblib.load(BytesIO(r1.content))
+    def fetch(path):
+        try:
+            r = requests.get(path, timeout=10)
+            r.raise_for_status()
+        except Exception as e:
+            st.error(f"Failed to download model from {path}: {e}")
+            raise
+        try:
+            return joblib.load(BytesIO(r.content))
+        except Exception as e:
+            st.error(f"Failed to deserialize model from {path}: {e}")
+            raise
 
-    r2 = requests.get(non_url)
-    r2.raise_for_status()
-    model_non = joblib.load(BytesIO(r2.content))
+    cal_sep = fetch(sep_url)
+    cal_non = fetch(non_url)
+    return cal_sep, cal_non
 
-    return model_sep, model_non
+# Load once
+try:
+    model_sep, model_non = load_models()
+except Exception:
+    st.stop()  # abort further execution if model loading fails
+    
 
 # ── 3) Feature definitions ──────────────────────────────────────────────────
 FEATURES    = [
