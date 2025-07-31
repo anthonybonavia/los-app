@@ -1,46 +1,58 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 import requests
 from io import BytesIO
-import sys, os
+import sys
 
-import subprocess, pkgutil
-st.write("Python:", sys.version.replace("\n"," "))
-st.write("Installed numpy:", __import__("numpy").__version__)
-st.write("Installed scikit-learn:", __import__("sklearn").__version__)
-st.write("Installed joblib:", __import__("joblib").__version__)
+# --- diagnostics (optional) ---
+st.write("Python:", sys.version.replace("\n", " "))
+try:
+    import numpy as np_mod
 
-subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=False)
+    st.write("Installed numpy:", np_mod.__version__)
+except ImportError:
+    st.write("numpy not installed")
+try:
+    import sklearn
 
+    st.write("Installed scikit-learn:", sklearn.__version__)
+except ImportError:
+    st.write("scikit-learn not installed")
+try:
+    import joblib as _joblib
 
-# ── 1) Load patient reference data for form dropdowns ─────────────────────────
+    st.write("Installed joblib:", _joblib.__version__)
+except ImportError:
+    st.write("joblib not installed")
+
+# --- 1) Load patient reference data for dropdowns ---
 @st.cache_data
 def load_data():
-    # Replace with your actual Dropbox direct-download link for my_table.csv
     url = (
         "https://www.dropbox.com/scl/fi/8o976w9g9k3heeclbe8mb/my_table.csv?rlkey=0114ysndn9aa27d15j2nd36je&dl=1"
     )
     df = pd.read_csv(url, low_memory=False)
+
     # map mechanically_ventilated strings → 0/1
-    df["mechanically_ventilated"] = df["mechanically_ventilated"].map({
-        "Yes": 1,
-        "No": 0,
-        "InvasiveVent": 1,
-        "SupplementalOxygen": 0,
-        np.nan: np.nan
-    }).astype(float)
-    # ensure sepsis3 flag
-    df["sepsis3"] = df["sepsis3"].fillna(0).astype(int)
-    # return only the columns needed for form choices
+    df["mechanically_ventilated"] = df["mechanically_ventilated"].map(
+        {
+            "Yes": 1,
+            "No": 0,
+            "InvasiveVent": 1,
+            "SupplementalOxygen": 0,
+            np.nan: np.nan,
+        }
+    ).astype(float)
+
+    df["sepsis3"] = df.get("sepsis3", 0).fillna(0).astype(int)
     return df
 
-# ── 2) Load pre‐built, calibrated models from Dropbox ─────────────────────────
-# Cache the loaded models so network fetch happens once per session
+
+# --- 2) Load prebuilt models from Dropbox ---
 @st.cache_resource
 def load_models():
-    # Replace these placeholders with your actual Dropbox "dl=1" links
     sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
     non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
 
@@ -51,6 +63,7 @@ def load_models():
         except Exception as e:
             st.error(f"Failed to download model from {path}: {e}")
             raise
+
         try:
             return joblib.load(BytesIO(r.content))
         except Exception as e:
@@ -61,37 +74,47 @@ def load_models():
     cal_non = fetch(non_url)
     return cal_sep, cal_non
 
-# Load once
+
+# --- feature definitions ---
+FEATURES = [
+    "age",
+    "charlson",
+    "sapsii",
+    "ventilation",
+    "bun_mg_dl",
+    "creatinine_mg_dl",
+    "mechanically_ventilated",
+    "sofa_score",
+    "respiration",
+    "coagulation",
+    "liver",
+    "cardiovascular",
+    "cns",
+    "renal",
+]
+NUMERIC = [f for f in FEATURES if f not in ("ventilation", "mechanically_ventilated")]
+BINARY = ["mechanically_ventilated"]
+CATEGORICAL = ["ventilation"]
+
+
+# --- load once ---
+df = load_data()
 try:
     model_sep, model_non = load_models()
 except Exception:
-    st.stop()  # abort further execution if model loading fails
-    
+    st.stop()
 
-# ── 3) Feature definitions ──────────────────────────────────────────────────
-FEATURES    = [
-    "age", "charlson", "sapsii", "ventilation",
-    "bun_mg_dl", "creatinine_mg_dl", "mechanically_ventilated",
-    "sofa_score", "respiration", "coagulation",
-    "liver", "cardiovascular", "cns", "renal"
-]
-NUMERIC     = [f for f in FEATURES if f not in ("ventilation", "mechanically_ventilated")]
-BINARY      = ["mechanically_ventilated"]
-CATEGORICAL = ["ventilation"]
-
-# ── 4) Load data & models ───────────────────────────────────────────────────
-df = load_data()
-model_sep, model_non = load_models()
-
-# ── 5) Build the Streamlit UI ────────────────────────────────────────────────
+# --- UI ---
 st.title("Multiclass LOS Classifier (Early Death, Short Stay, Long Stay)")
 
-st.markdown("""
+st.markdown(
+    """
 **Class definitions**  
 - **early_death**: died in hospital < 10 days  
 - **short_los**: stay < 10 days  
 - **long_los**: stay ≥ 10 days  
-""")
+"""
+)
 
 st.subheader("Predict an Individual Patient Outcome")
 with st.form("patient_form"):
@@ -102,8 +125,10 @@ with st.form("patient_form"):
             inputs[feat] = st.number_input(label, value=float("nan"))
         elif feat in BINARY:
             inputs[feat] = st.selectbox(label, ["Unknown", "Yes", "No"])
-        else:
-            options = ["Unknown"] + sorted(df[feat].dropna().unique().tolist())
+        else:  # categorical
+            options = ["Unknown"]
+            if feat in df.columns:
+                options += sorted(df[feat].dropna().unique().tolist())
             inputs[feat] = st.selectbox(label, options)
     sepsis_flag = st.selectbox("Meets Sepsis-3 Criteria?", ["Yes", "No"])
     submitted = st.form_submit_button("Compute")
@@ -116,22 +141,34 @@ if submitted:
             pat[feat] = val
         elif feat in BINARY:
             if val == "Yes":
-                pat[feat] = 1
+                pat[feat] = 1.0
             elif val == "No":
-                pat[feat] = 0
+                pat[feat] = 0.0
             else:
                 pat[feat] = np.nan
-        else:
+        else:  # categorical
             pat[feat] = val if val != "Unknown" else np.nan
 
     pat_df = pd.DataFrame([pat])
 
-    # Select the appropriate pre‐trained model
+    # Check for missing required columns
+    missing = [c for c in FEATURES if c not in pat_df.columns]
+    if missing:
+        st.error(f"Input is missing expected features: {missing}")
+        st.stop()
+
+    # Choose model
     model = model_sep if sepsis_flag == "Yes" else model_non
 
-    # Predict and display
-    pred = model.predict(pat_df)[0]
-    probs = model.predict_proba(pat_df)[0]
+    # Prediction with error handling
+    try:
+        pred = model.predict(pat_df)[0]
+        probs = model.predict_proba(pat_df)[0]
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        st.write("Input row:")
+        st.write(pat_df)
+        st.stop()
 
     st.write(f"**Predicted class:** {pred}")
     st.write("**Class probabilities:**")
