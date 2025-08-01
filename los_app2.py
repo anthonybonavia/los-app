@@ -120,8 +120,8 @@ def load_models():
     "cardiovascular": 1, "cns": 1, "renal": 1
     }])
     try:
-    _ = cal_sep.predict(dummy)
-    _ = cal_non.predict(dummy)
+        _ = cal_sep.predict(dummy)
+        _ = cal_non.predict(dummy)
         st.success("Sanity-check prediction on both models succeeded.")
     except Exception:
         st.error("Sanity-check prediction failed:")
