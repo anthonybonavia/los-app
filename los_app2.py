@@ -108,10 +108,31 @@ def load_models():
                     raise
     cal_sep = fetch_and_load("sepsis", sep_url)
     cal_non = fetch_and_load("non-sepsis", non_url)
+    
+    st.write("Sepsis model classes:", cal_sep.classes_)
+    st.write("Non-sepsis model classes:", cal_non.classes_)
+    
+    dummy = pd.DataFrame([{
+    "age": 60, "charlson": 2, "sapsii": 20,
+    "ventilation": "Unknown", "bun_mg_dl": 15, "creatinine_mg_dl": 1.0,
+    "mechanically_ventilated": np.nan, "sofa_score": 5,
+    "respiration": 18, "coagulation": 1, "liver": 1,
+    "cardiovascular": 1, "cns": 1, "renal": 1
+    }])
+    try:
+    _ = cal_sep.predict(dummy)
+    _ = cal_non.predict(dummy)
+        st.success("Sanity-check prediction on both models succeeded.")
+    except Exception:
+        st.error("Sanity-check prediction failed:")
+        st.text(traceback.format_exc())
+
+    
     return cal_sep, cal_non
 
 try:
     model_sep, model_non = load_models()
+    st.write("Successfully loaded both models.")
 except Exception:
     st.error("load_models() raised an exception:")
     st.text(traceback.format_exc())
@@ -150,6 +171,18 @@ st.markdown(
 """
 )
 
+try:
+    pred = model.predict(pat_df)[0]
+    probs = model.predict_proba(pat_df)[0]
+    st.write(f"**Predicted class:** {pred}")
+    st.write("**Class probabilities:**")
+    proba_df = pd.DataFrame([probs], columns=model.classes_)
+    st.table(proba_df.style.format("{:.2%}"))
+except Exception:
+    st.error("Prediction failed with exception:")
+    st.text(traceback.format_exc())
+    st.write("Input row:", pat_df.to_dict(orient="records")[0])
+    
 st.subheader("Predict an Individual Patient Outcome")
 with st.form("patient_form"):
     inputs = {}
