@@ -45,6 +45,12 @@ def load_models(max_retries=3):
                 r.raise_for_status()
                 content = r.content
                 st.write(f"{key} model download size: {len(content):,} bytes")
+                # Quick sanity check: if it looks like HTML, fail early
+                prefix = content[:100].lower()
+                if prefix.startswith(b"<") or b"html" in prefix:
+                    snippet = content[:500].decode(errors="ignore")
+                    raise RuntimeError(f"Downloaded content for {key} model appears to be HTML or invalid. Prefix/snippet:\n{snippet!r}")
+                # Try to load
                 model = joblib.load(BytesIO(content))
                 st.write(f"Successfully loaded model from {key} model; classes: {getattr(model, 'classes_', None)}")
                 loaded[key] = model
@@ -53,10 +59,9 @@ def load_models(max_retries=3):
                 st.warning(f"Failed to fetch/load {key} model on attempt {attempt}: {e}")
                 last_exc = e
         else:
-            # all attempts failed
             raise RuntimeError(f"Could not load {key} model after {max_retries} attempts. Last error: {last_exc}")
-    # return tuple in expected order
     return loaded["sepsis"], loaded["nonsepsis"]
+
 
 # Wrap load with visible errors
 try:
