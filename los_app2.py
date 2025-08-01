@@ -67,6 +67,10 @@ def load_models():
 
     def fetch_and_load(path, name):
         st.write(f"Attempting to download model ({name}) from {path}")
+        st.write(f"{name} download size: {len(r.content)} bytes")
+        if b"<!DOCTYPE html" in r.content[:200].lower():
+            st.error(f"{name} appears to be HTML rather than a pickle; content preview: {r.content[:500]!r}")
+
         try:
             r = requests.get(path, timeout=15)
             st.write(f"HTTP status for {name}: {r.status_code}")
