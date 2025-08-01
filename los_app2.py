@@ -7,8 +7,8 @@ try:
     import pandas as pd
     import numpy as np
     import pandas as pd
-	import requests
-	from io import BytesIO
+    import requests
+    from io import BytesIO
 except Exception as e:
     st.error("Startup failure—see details below.")
     st.text("".join(traceback.format_exception(e.__class__, e, e.__traceback__)))
