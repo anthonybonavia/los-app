@@ -86,8 +86,8 @@ def fetch_with_logging(path, name, max_retries=2):
 
 @st.cache_resource
 def load_models():
-    sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
-    non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
+    sep_url = "https://www.dropbox.com/scl/fi/lenmtptch7wkxvycm9l2j/model_sepsis_calibrated_compressed.pkl?rlkey=pzlownxh2qnin26vjaz4rlh8o&dl=1"
+    non_url = "https://www.dropbox.com/scl/fi/pmv1s1p4r00v7uogf8zgf/model_nonsepsis_calibrated_compressed.pkl?rlkey=06746p5qux626hgzj1705ubw0&dl=1"
 
     def fetch_and_load(name, url):
         for attempt in range(1, 4):
