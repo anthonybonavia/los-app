@@ -1,5 +1,6 @@
 ﻿import streamlit as st
 import traceback, sys
+import time
 
 try:
     # existing imports and code follow here...
@@ -61,39 +62,44 @@ def load_data():
 
 # --- 2) Load prebuilt models from Dropbox ---
 @st.cache_resource
-def load_models():
-    sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
-    non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
-
-    def fetch_and_load(path, name):
-        st.write(f"Attempting to download model ({name}) from {path}")
-        st.write(f"{name} download size: {len(r.content)} bytes")
-        if b"<!DOCTYPE html" in r.content[:200].lower():
-            st.error(f"{name} appears to be HTML rather than a pickle; content preview: {r.content[:500]!r}")
-
+def fetch_with_logging(path, name, max_retries=2):
+    for attempt in range(1, max_retries + 1):
         try:
+            st.write(f"Attempting to download {name}, try {attempt}")
             r = requests.get(path, timeout=15)
             st.write(f"HTTP status for {name}: {r.status_code}")
             r.raise_for_status()
         except Exception as e:
-            st.error(f"Failed to download {name}: {e}")
-            raise
+            st.warning(f"Download attempt {attempt} for {name} failed: {e}")
+            if attempt == max_retries:
+                st.error(f"Giving up downloading {name} after {attempt} attempts.")
+                raise
+            time.sleep(1)
+            continue
         try:
             model = joblib.load(BytesIO(r.content))
-            st.write(f"Successfully loaded model {name}; classes: {getattr(model, 'classes_', 'UNKNOWN')}")
+            st.success(f"Successfully loaded model from {name}; classes: {getattr(model, 'classes_', None)}")
             return model
         except Exception as e:
-            st.error(f"Failed to deserialize {name}: {e}")
-            import traceback
-            st.text(traceback.format_exc())
+            st.error(f"Deserialization of {name} failed: {e}")
             raise
 
-    cal_sep = fetch_and_load(sep_url, "sepsis")
-    cal_non = fetch_and_load(non_url, "nonsepsis")
+@st.cache_resource
+def load_models():
+    sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
+    non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
+
+    cal_sep = fetch_with_logging(sep_url, "sepsis model")
+    cal_non = fetch_with_logging(non_url, "non-sepsis model")
     return cal_sep, cal_non
 
-
-
+try:
+    model_sep, model_non = load_models()
+except Exception:
+    st.error("load_models() raised an exception:")
+    st.text(traceback.format_exc())
+    st.stop()
+    
 # --- feature definitions ---
 FEATURES = [
     "age",
@@ -114,14 +120,6 @@ FEATURES = [
 NUMERIC = [f for f in FEATURES if f not in ("ventilation", "mechanically_ventilated")]
 BINARY = ["mechanically_ventilated"]
 CATEGORICAL = ["ventilation"]
-
-
-# --- load once ---
-df = load_data()
-try:
-    model_sep, model_non = load_models()
-except Exception:
-    st.stop()
 
 # --- UI ---
 st.title("Multiclass LOS Classifier (Early Death, Short Stay, Long Stay)")
