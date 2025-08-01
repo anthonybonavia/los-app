@@ -1,11 +1,19 @@
 ﻿import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-import requests
-from io import BytesIO
-import sys
+import traceback, sys
 
+try:
+    # existing imports and code follow here...
+    import joblib
+    import pandas as pd
+    import numpy as np
+    import pandas as pd
+	import requests
+	from io import BytesIO
+except Exception as e:
+    st.error("Startup failure—see details below.")
+    st.text("".join(traceback.format_exception(e.__class__, e, e.__traceback__)))
+    sys.exit(1)
+    
 #comment
 # --- diagnostics (optional) ---
 st.write("Python:", sys.version.replace("\n", " "))
