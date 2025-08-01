@@ -65,24 +65,29 @@ def load_models():
     sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
     non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
 
-
     def fetch(path):
+        st.write(f"Attempting to download model from {path}")
         try:
-            r = requests.get(path, timeout=10)
+            r = requests.get(path, timeout=15)
+            st.write(f"HTTP status: {r.status_code}")
             r.raise_for_status()
         except Exception as e:
-            st.error(f"Failed to download model from {path}: {e}")
+            st.error(f"Download failed for {path}: {e}")
             raise
-
         try:
-            return joblib.load(BytesIO(r.content))
+            model = joblib.load(BytesIO(r.content))
+            st.write(f"Successfully loaded model from {path}; classes: {getattr(model, 'classes_', 'N/A')}")
+            return model
         except Exception as e:
-            st.error(f"Failed to deserialize model from {path}: {e}")
+            st.error(f"Deserialization failed for {path}: {e}")
             raise
 
     cal_sep = fetch(sep_url)
     cal_non = fetch(non_url)
     return cal_sep, cal_non
+
+
+
 
 
 # --- feature definitions ---
