@@ -89,8 +89,25 @@ def load_models():
     sep_url = "https://www.dropbox.com/scl/fi/puhntj2y9c4mv9k7fhmoo/model_sepsis_calibrated.pkl?rlkey=ty804av5nlg1ab8892u22w2xi&dl=1"
     non_url = "https://www.dropbox.com/scl/fi/c2oetaenrktyxe9kbj8nh/model_nonsepsis_calibrated.pkl?rlkey=repy9bvq99hl90bc4jwnhk3a3&dl=1"
 
-    cal_sep = fetch_with_logging(sep_url, "sepsis model")
-    cal_non = fetch_with_logging(non_url, "non-sepsis model")
+    def fetch_and_load(name, url):
+        for attempt in range(1, 4):
+            st.write(f"Attempting to download {name} model, try {attempt}")
+            try:
+                r = requests.get(url, timeout=30)
+                st.write(f"HTTP status for {name} model: {r.status_code}")
+                r.raise_for_status()
+                st.write(f"{name} model download size: {len(r.content):,} bytes")
+                model = joblib.load(BytesIO(r.content))
+                st.write(f"Successfully loaded model from {name} model; classes: {getattr(model, 'classes_', 'N/A')}")
+                return model
+            except Exception as e:
+                st.warning(f"Failed to fetch/load {name} model on attempt {attempt}: {e}")
+                if attempt < 3:
+                    time.sleep(2 ** attempt)
+                else:
+                    raise
+    cal_sep = fetch_and_load("sepsis", sep_url)
+    cal_non = fetch_and_load("non-sepsis", non_url)
     return cal_sep, cal_non
 
 try:
